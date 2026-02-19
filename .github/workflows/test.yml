@@ -1,0 +1,74 @@
+name: Run tests
+
+on:
+  push:
+    branches:
+      - main
+  pull_request:
+    branches:
+      - main
+
+jobs:
+  # ── Job 1: runs on every push to main ─────────────────────────────────────
+  test-on-push:
+    if: github.event_name == 'push'
+    runs-on: ubuntu-latest
+
+    strategy:
+      matrix:
+        python-version: ["3.9", "3.10", "3.11", "3.12"]
+
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Set up Python ${{ matrix.python-version }}
+        uses: actions/setup-python@v5
+        with:
+          python-version: ${{ matrix.python-version }}
+
+      - name: Install dependencies
+        run: pip install -r requirements.txt
+
+      - name: Run tests with coverage
+        run: coverage run --branch -m pytest -v
+
+      - name: Print coverage report
+        run: coverage report -m
+
+      - name: Fail if coverage is below 90%
+        run: coverage report --fail-under=90
+
+  # ── Job 2: runs on pull requests to main ──────────────────────────────────
+  test-on-pr:
+    if: github.event_name == 'pull_request'
+    runs-on: ubuntu-latest
+
+    strategy:
+      matrix:
+        python-version: ["3.9", "3.10", "3.11", "3.12"]
+
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Set up Python ${{ matrix.python-version }}
+        uses: actions/setup-python@v5
+        with:
+          python-version: ${{ matrix.python-version }}
+
+      - name: Install dependencies
+        run: pip install -r requirements.txt
+
+      - name: Install style-check tool (PR-only)
+        run: pip install flake8
+
+      - name: Run style check with flake8 (PR-only)
+        run: flake8 bank_account/ tests/ --max-line-length=100
+
+      - name: Run tests with coverage
+        run: coverage run --branch -m pytest -v
+
+      - name: Print coverage report
+        run: coverage report -m
+
+      - name: Fail if coverage is below 90%
+        run: coverage report --fail-under=90
